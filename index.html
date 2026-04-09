@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="収支管理帳">
+<meta name="theme-color" content="#0a0a10">
+<title>収支管理帳</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#0a0a10;--card:#13131c;--card2:#1a1a26;--border:#252535;
+  --gold:#b8a070;--gold2:#d4bc8a;--text:#ede8de;--muted:#6a6a80;--muted2:#3a3a50;
+  --green:#4ec876;--red:#e05555;--blue:#6aaee8;--purple:#a07ade;--teal:#5ab4d0;--yellow:#c8b05a;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Zen Kaku Gothic New','Hiragino Kaku Gothic ProN',sans-serif;overflow-x:hidden;}
+
+.header{position:sticky;top:0;z-index:50;background:rgba(10,10,16,.97);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:16px 20px 12px;}
+.header-inner{display:flex;align-items:center;justify-content:space-between;}
+.header-left{display:flex;flex-direction:column;gap:2px;}
+.header-eyebrow{font-size:9px;letter-spacing:4px;color:var(--gold);text-transform:uppercase;}
+.header-title{font-size:20px;font-weight:900;color:#f0ead6;}
+.sync-badge{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--muted2);flex-shrink:0;}
+.sync-dot.ok{background:var(--green);}
+.sync-dot.err{background:var(--red);}
+.sync-dot.ing{background:var(--gold);animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:16px;}
+.sum-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 10px;position:relative;overflow:hidden;}
+.sum-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.sum-card.in::before{background:var(--green);}
+.sum-card.out::before{background:var(--red);}
+.sum-card.bal::before{background:var(--blue);}
+.sum-label{font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px;}
+.sum-val{font-size:15px;font-weight:900;line-height:1;}
+
+.form-section{margin:0 16px 16px;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:20px;transition:box-shadow .4s;}
+.form-section.flash{box-shadow:0 0 0 2px var(--green)66;}
+.form-eyebrow{font-size:9px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;margin-bottom:16px;display:block;}
+.field{margin-bottom:14px;}
+.field-label{display:block;font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;}
+.field input,.field select{width:100%;padding:12px 14px;border-radius:10px;background:#08080e;border:1px solid var(--border);color:var(--text);font-size:16px;font-family:inherit;outline:none;-webkit-appearance:none;transition:border-color .2s;}
+.field input:focus,.field select:focus{border-color:var(--gold)66;}
+.field input[type=number]{text-align:right;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.type-row{display:flex;gap:8px;}
+.type-btn{flex:1;padding:11px;border-radius:10px;cursor:pointer;border:1.5px solid var(--border);background:#08080e;color:var(--muted);font-weight:900;font-size:14px;font-family:inherit;transition:all .15s;}
+.type-btn.in.active{border-color:var(--green);background:#4ec87618;color:var(--green);}
+.type-btn.out.active{border-color:var(--red);background:#e0555518;color:var(--red);}
+.btn-primary{width:100%;padding:14px;border-radius:12px;margin-top:6px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:#08080e;border:none;cursor:pointer;font-weight:900;font-size:15px;font-family:inherit;letter-spacing:1px;}
+.btn-primary:active{opacity:.8;}
+.btn-cancel{width:100%;padding:10px;border-radius:12px;margin-top:8px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:14px;font-family:inherit;display:none;}
+
+.filter-section{padding:0 16px 12px;display:flex;gap:6px;flex-wrap:wrap;}
+.f-btn{padding:6px 14px;border-radius:20px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted2);font-family:inherit;transition:all .15s;}
+.f-btn.active{border-color:var(--gold);background:#b8a07018;color:var(--gold);}
+
+.list-section{margin:0 16px 100px;background:var(--card);border:1px solid var(--border);border-radius:18px;overflow:hidden;}
+.empty{padding:48px 20px;text-align:center;color:var(--muted2);font-size:14px;line-height:1.8;}
+.loading{padding:40px;text-align:center;color:var(--muted);font-size:14px;}
+
+.record-item{display:grid;grid-template-columns:1fr auto;gap:12px;padding:14px 16px;border-bottom:1px solid var(--card2);align-items:start;animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.record-item:last-of-type{border-bottom:none;}
+.record-item:nth-child(even){background:rgba(255,255,255,.015);}
+.rec-left{display:flex;flex-direction:column;gap:5px;}
+.rec-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.rec-date{font-size:11px;color:var(--muted);}
+.rec-cat{font-size:10px;padding:2px 9px;border-radius:20px;font-weight:700;}
+.rec-cat.ai{background:#2a1f4a;color:var(--purple);}
+.rec-cat.nogi{background:#1a2e3a;color:var(--teal);}
+.rec-cat.other{background:#2a2a1a;color:var(--yellow);}
+.rec-desc{font-size:13px;color:#c0b8a8;}
+.rec-actions{display:flex;gap:5px;margin-top:4px;}
+.act-btn{padding:4px 10px;border-radius:6px;font-size:11px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-family:inherit;}
+.act-btn:active{opacity:.6;}
+.rec-right{text-align:right;}
+.rec-amount{font-size:17px;font-weight:900;white-space:nowrap;}
+.rec-type{font-size:10px;font-weight:700;margin-top:3px;}
+
+.total-bar{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;background:var(--card2);border-top:1px solid var(--border);}
+.total-label{font-size:10px;letter-spacing:2px;color:var(--muted);}
+.total-val{font-size:17px;font-weight:900;}
+
+.edit-banner{margin:0 16px 12px;padding:10px 16px;border-radius:10px;background:#b8a07018;border:1px solid var(--gold)44;color:var(--gold);font-size:12px;display:none;}
+
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(90px);padding:11px 26px;border-radius:30px;font-size:13px;font-weight:700;transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:999;pointer-events:none;background:var(--green);color:#08080e;white-space:nowrap;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.error{background:var(--red);color:#fff;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-left">
+      <span class="header-eyebrow">Cash Flow</span>
+      <span class="header-title">収支管理帳</span>
+    </div>
+    <div class="sync-badge">
+      <span class="sync-dot ing" id="sync-dot"></span>
+      <span id="sync-text">接続中…</span>
+    </div>
+  </div>
+</div>
+
+<div class="summary">
+  <div class="sum-card in"><div class="sum-label">入金合計</div><div class="sum-val" style="color:var(--green)" id="s-in">¥0</div></div>
+  <div class="sum-card out"><div class="sum-label">出金合計</div><div class="sum-val" style="color:var(--red)" id="s-out">¥0</div></div>
+  <div class="sum-card bal"><div class="sum-label">収支</div><div class="sum-val" id="s-bal" style="color:var(--blue)">¥0</div></div>
+</div>
+
+<div class="edit-banner" id="edit-banner">✏️ 編集中…</div>
+
+<div class="form-section" id="form-wrap">
+  <span class="form-eyebrow" id="form-title">NEW ENTRY</span>
+  <input type="hidden" id="edit-id">
+  <div class="row2">
+    <div class="field"><label class="field-label">日にち</label><input type="date" id="f-date"></div>
+    <div class="field"><label class="field-label">項目</label>
+      <select id="f-cat"><option>AIマンツーマン</option><option>乃木坂講座</option><option>その他講座</option></select>
+    </div>
+  </div>
+  <div class="field">
+    <label class="field-label">種別</label>
+    <div class="type-row">
+      <button class="type-btn in active" id="btn-in"  onclick="setType('in')">入金</button>
+      <button class="type-btn out"       id="btn-out" onclick="setType('out')">出金</button>
+    </div>
+    <input type="hidden" id="f-type" value="in">
+  </div>
+  <div class="row2">
+    <div class="field"><label class="field-label">適用</label><input type="text" id="f-desc" placeholder="月謝、体験レッスン…"></div>
+    <div class="field"><label class="field-label">金額（円）</label><input type="number" id="f-amount" placeholder="0" inputmode="numeric"></div>
+  </div>
+  <button class="btn-primary" id="submit-btn" onclick="submitForm()">記録する</button>
+  <button class="btn-cancel"  id="cancel-btn" onclick="cancelEdit()">キャンセル</button>
+</div>
+
+<div class="filter-section">
+  <button class="f-btn active" onclick="setFilter(this,'すべて')">すべて</button>
+  <button class="f-btn" onclick="setFilter(this,'AIマンツーマン')">AIマンツーマン</button>
+  <button class="f-btn" onclick="setFilter(this,'乃木坂講座')">乃木坂講座</button>
+  <button class="f-btn" onclick="setFilter(this,'その他講座')">その他講座</button>
+</div>
+
+<div class="list-section" id="record-list">
+  <div class="loading">🔥 Firebase に接続中…</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import { getDatabase, ref, set, onValue, push, remove, update }
+  from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+
+// ★ Firebase設定
+const firebaseConfig = {
+  apiKey: "AIzaSyBPtemv6nyAEI9E56ru01izqBWZzHm5F74",
+  authDomain: "cash-account-book.firebaseapp.com",
+  projectId: "cash-account-book",
+  storageBucket: "cash-account-book.firebasestorage.app",
+  messagingSenderId: "239737053170",
+  appId: "1:239737053170:web:1e202808c919002960956b",
+  databaseURL: "https://cash-account-book-default-rtdb.asia-southeast1.firebasedatabase.app"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+const recordsRef = ref(db, 'records');
+
+const fmt = n => '¥' + new Intl.NumberFormat('ja-JP').format(n);
+const fmtDate = d => { if(!d) return ''; const p=String(d).split('-'); return p.length===3?p[0]+'/'+p[1]+'/'+p[2]:d; };
+
+let records = [];
+let filterCat = 'すべて';
+
+// ── 今日の日付セット ──
+const now = new Date();
+document.getElementById('f-date').value =
+  now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+
+// ── Firebase リアルタイム監視 ──
+onValue(recordsRef, (snapshot) => {
+  const data = snapshot.val();
+  if (data) {
+    records = Object.entries(data).map(([key, val]) => ({ ...val, _key: key }));
+    records.sort((a,b) => b.date > a.date ? 1 : b.date < a.date ? -1 : 0);
+  } else {
+    records = [];
+  }
+  setSyncStatus('ok');
+  render();
+}, (error) => {
+  setSyncStatus('err');
+  toast('接続エラー: ' + error.message, true);
+});
+
+function setSyncStatus(s) {
+  const dot  = document.getElementById('sync-dot');
+  const text = document.getElementById('sync-text');
+  if (s==='ok')  { dot.className='sync-dot ok';  text.textContent='同期済み'; }
+  if (s==='ing') { dot.className='sync-dot ing'; text.textContent='同期中…'; }
+  if (s==='err') { dot.className='sync-dot err'; text.textContent='エラー'; }
+}
+
+// ── UI ──
+function setType(t) {
+  document.getElementById('f-type').value = t;
+  document.getElementById('btn-in').className  = 'type-btn in'  + (t==='in' ?' active':'');
+  document.getElementById('btn-out').className = 'type-btn out' + (t==='out'?' active':'');
+}
+window.setType = setType;
+
+function setFilter(btn, cat) {
+  filterCat = cat;
+  document.querySelectorAll('.f-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+window.setFilter = setFilter;
+
+function catClass(c) {
+  if(c==='AIマンツーマン') return 'ai';
+  if(c==='乃木坂講座') return 'nogi';
+  return 'other';
+}
+
+function render() {
+  const filtered = records.filter(r => filterCat==='すべて' || r.category===filterCat);
+  const tin  = filtered.filter(r=>r.type==='in').reduce((s,r)=>s+Number(r.amount),0);
+  const tout = filtered.filter(r=>r.type==='out').reduce((s,r)=>s+Number(r.amount),0);
+  const bal  = tin - tout;
+
+  document.getElementById('s-in').textContent  = '+'+fmt(tin);
+  document.getElementById('s-out').textContent = '−'+fmt(tout);
+  const bEl = document.getElementById('s-bal');
+  bEl.textContent = (bal>=0?'+':'−')+fmt(Math.abs(bal));
+  bEl.style.color = bal>=0 ? 'var(--blue)' : 'var(--red)';
+
+  const list = document.getElementById('record-list');
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty">まだ記録がありません📝<br>上のフォームから入力してください</div>';
+    return;
+  }
+
+  let html = '';
+  filtered.forEach(r => {
+    const isIn = r.type==='in';
+    html += `<div class="record-item">
+      <div class="rec-left">
+        <div class="rec-top">
+          <span class="rec-date">${fmtDate(r.date)}</span>
+          <span class="rec-cat ${catClass(r.category)}">${r.category}</span>
+        </div>
+        <div class="rec-desc">${r.description}</div>
+        <div class="rec-actions">
+          <button class="act-btn" onclick="startEdit('${r._key}')">✏️ 編集</button>
+          <button class="act-btn" onclick="deleteRecord('${r._key}')">✕ 削除</button>
+        </div>
+      </div>
+      <div class="rec-right">
+        <div class="rec-amount" style="color:${isIn?'var(--green)':'var(--red)'}">${isIn?'+':'−'}${fmt(r.amount)}</div>
+        <div class="rec-type"   style="color:${isIn?'var(--green)':'var(--red)'}">${isIn?'入金':'出金'}</div>
+      </div>
+    </div>`;
+  });
+
+  html += `<div class="total-bar">
+    <span class="total-label">TOTAL</span>
+    <span class="total-val" style="color:${bal>=0?'var(--blue)':'var(--red)'}">${bal>=0?'+':'−'}${fmt(Math.abs(bal))}</span>
+  </div>`;
+  list.innerHTML = html;
+}
+
+// ── CRUD ──
+async function submitForm() {
+  const date   = document.getElementById('f-date').value;
+  const cat    = document.getElementById('f-cat').value;
+  const type   = document.getElementById('f-type').value;
+  const desc   = document.getElementById('f-desc').value.trim();
+  const amount = parseInt(document.getElementById('f-amount').value);
+  const editKey= document.getElementById('edit-id').value;
+
+  if(!date||!desc||!amount||isNaN(amount)){ toast('全ての項目を入力してください',true); return; }
+
+  setSyncStatus('ing');
+  const data = { date, category:cat, type, description:desc, amount };
+
+  if (editKey) {
+    await update(ref(db, 'records/'+editKey), data);
+    cancelEdit();
+    toast('✅ 更新しました！');
+  } else {
+    await push(recordsRef, data);
+    document.getElementById('f-desc').value  = '';
+    document.getElementById('f-amount').value= '';
+    const fw = document.getElementById('form-wrap');
+    fw.classList.add('flash');
+    setTimeout(()=>fw.classList.remove('flash'),1200);
+    toast('✅ 記録しました！');
+  }
+}
+window.submitForm = submitForm;
+
+function startEdit(key) {
+  const r = records.find(r=>r._key===key); if(!r) return;
+  document.getElementById('edit-id').value   = r._key;
+  document.getElementById('f-date').value    = r.date;
+  document.getElementById('f-cat').value     = r.category;
+  document.getElementById('f-desc').value    = r.description;
+  document.getElementById('f-amount').value  = r.amount;
+  setType(r.type);
+  document.getElementById('form-title').textContent   = 'EDIT ENTRY';
+  document.getElementById('submit-btn').textContent   = '更新する';
+  document.getElementById('cancel-btn').style.display = 'block';
+  document.getElementById('edit-banner').style.display= 'block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+window.startEdit = startEdit;
+
+function cancelEdit() {
+  document.getElementById('edit-id').value            = '';
+  document.getElementById('form-title').textContent   = 'NEW ENTRY';
+  document.getElementById('submit-btn').textContent   = '記録する';
+  document.getElementById('cancel-btn').style.display = 'none';
+  document.getElementById('edit-banner').style.display= 'none';
+  document.getElementById('f-desc').value  = '';
+  document.getElementById('f-amount').value= '';
+  setType('in');
+}
+window.cancelEdit = cancelEdit;
+
+async function deleteRecord(key) {
+  if(!confirm('この記録を削除しますか？')) return;
+  setSyncStatus('ing');
+  await remove(ref(db, 'records/'+key));
+  toast('🗑️ 削除しました');
+}
+window.deleteRecord = deleteRecord;
+
+function toast(msg, isErr) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast'+(isErr?' error':'')+' show';
+  setTimeout(()=>{ t.className='toast'+(isErr?' error':''); },2500);
+}
+</script>
+</body>
+</html>
