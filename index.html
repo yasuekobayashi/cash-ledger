@@ -102,9 +102,12 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ze
       <span class="header-eyebrow">Cash Flow</span>
       <span class="header-title">収支管理帳</span>
     </div>
-    <div class="sync-badge">
-      <span class="sync-dot ing" id="sync-dot"></span>
-      <span id="sync-text">接続中…</span>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="sync-badge">
+        <span class="sync-dot ing" id="sync-dot"></span>
+        <span id="sync-text">接続中…</span>
+      </div>
+      <button onclick="exportCSV()" style="padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid var(--gold);color:var(--gold);background:transparent;cursor:pointer;font-family:inherit;">CSV📥</button>
     </div>
   </div>
 </div>
@@ -345,6 +348,24 @@ async function deleteRecord(key) {
   toast('🗑️ 削除しました');
 }
 window.deleteRecord = deleteRecord;
+
+function exportCSV() {
+  if(!records.length){ toast("記録がありません",true); return; }
+  const sorted = records.slice().sort((a,b)=>a.date>b.date?1:a.date<b.date?-1:0);
+  const header = "ID,日にち,項目,適用,種別,金額";
+  const rows = sorted.map(r=>[
+    r.id||"",r.date,r.category,'"'+r.description+'"',
+    r.type==="in"?"入金":"出金",r.amount
+  ].join(","));
+  const csv = "\uFEFF"+[header,...rows].join("\n");
+  const blob = new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href=url; a.download="収支記録_"+new Date().toISOString().slice(0,10)+".csv";
+  a.click(); URL.revokeObjectURL(url);
+  toast("📊 CSVをダウンロードしました！");
+}
+window.exportCSV = exportCSV;
 
 function toast(msg, isErr) {
   const t = document.getElementById('toast');
